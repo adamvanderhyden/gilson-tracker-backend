@@ -116,12 +116,207 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 			return getTrackerRoom(expr)
 
 		case "wood":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("side_cnc")),
+					expression.AttributeExists(expression.Name("side_pour")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("wood_core")),
+						expression.AttributeNotExists(expression.Name("wood_cart"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "sub":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("side_cnc")),
+					expression.AttributeExists(expression.Name("side_pour")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("sub_base")),
+						expression.AttributeNotExists(expression.Name("sub_top")),
+						expression.AttributeNotExists(expression.Name("sub_cart"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "ed":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("sub_base")),
+					expression.AttributeExists(expression.Name("sub_top")),
+					expression.AttributeExists(expression.Name("sub_cart")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("ed_glue")),
+						expression.AttributeNotExists(expression.Name("ed_cart"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "dr":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.Or(
+						expression.AttributeExists(expression.Name("wood_cart")),
+						expression.AttributeExists(expression.Name("sub_cart")),
+						expression.AttributeExists(expression.Name("ed_cart"))),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("wood_cart")),
+						expression.AttributeNotExists(expression.Name("sub_cart")),
+						expression.AttributeNotExists(expression.Name("ed_cart"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "lay":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("wood_cart")),
+					expression.AttributeExists(expression.Name("sub_cart")),
+					expression.AttributeExists(expression.Name("ed_cart")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("lay_press")),
+						expression.AttributeNotExists(expression.Name("lay_inspect"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "fin":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("lay_press")),
+					expression.AttributeExists(expression.Name("lay_inspect")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("fin_tune")),
+						expression.AttributeNotExists(expression.Name("fin_inspect"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		case "wax":
+
+			expr, bErr := expression.NewBuilder().WithFilter(
+				expression.And(
+					expression.AttributeNotExists(expression.Name("is_deleted")),
+					expression.AttributeNotExists(expression.Name("time_finish")),
+					expression.AttributeExists(expression.Name("time_start")),
+					expression.AttributeExists(expression.Name("fin_tune")),
+					expression.AttributeExists(expression.Name("fin_inspect")),
+					expression.Or(
+						expression.AttributeNotExists(expression.Name("wax_wax")),
+						expression.AttributeNotExists(expression.Name("wax_inspect"))))).Build()
+
+			if bErr != nil {
+
+				r.Error = fmt.Sprintf("Bad Filter Build: %v", err)
+
+				resp, _ := json.MarshalIndent(r, "", "  ")
+
+				return events.APIGatewayProxyResponse{
+					StatusCode: 400,
+					Headers:    HEADERS,
+					Body:       string(resp),
+				}, nil
+			}
+
+			return getTrackerRoom(expr)
+
 		default:
 
 			r.Error = "Bad Room"
@@ -139,7 +334,6 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 		case "hold":
 			return updateRoom()
 		case "side":
-			return updateRoom()
 		case "wood":
 		case "sub":
 		case "ed":
