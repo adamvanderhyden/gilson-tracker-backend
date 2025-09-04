@@ -9,8 +9,10 @@ type TrackerJson struct {
 
 	Notes []string `json:"notes"`
 
-	IsRush    bool `json:"is_rush"`
-	IsDeleted bool `json:"is_deleted"`
+	IsRush bool `json:"is_rush"`
+
+	Deleted    string `json:"deleted"`
+	WhoDeleted string `json:"who_deleted"`
 
 	SideCnc    string `json:"side_cnc"`
 	SidePour   string `json:"side_pour"`
@@ -56,8 +58,10 @@ type TrackerDynamo struct {
 
 	Notes []string `dynamodbav:"notes"`
 
-	IsRush    bool `dynamodbav:"is_rush"`
-	IsDeleted bool `dynamodbav:"is_deleted"`
+	IsRush bool `dynamodbav:"is_rush"`
+
+	Deleted    string `dynamodbav:"deleted"`
+	WhoDeleted string `dynamodbav:"who_deleted"`
 
 	SideCnc    string `dynamodbav:"side_cnc"`
 	SidePour   string `dynamodbav:"side_pour"`
