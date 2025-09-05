@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -17,8 +18,9 @@ import (
 )
 
 const (
-	TABLE_TRACKER = "Tracker"
-	PAR_SERIAL    = "serial"
+	TABLE_TRACKER  = "Tracker"
+	TABLE_EMPLOYEE = "Employee"
+	PAR_SERIAL     = "serial"
 )
 
 var HEADERS = map[string]string{
@@ -70,26 +72,13 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 		switch d.Room {
 
-		// TODO - sort everything
-
 		case "hold":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeNotExists(expression.Name("time_start")))).Build()
-
-			// expression.And(
-			// expression.Or(
-			// 	expression.AttributeNotExists(expression.Name("is_deleted")),
-			// 	expression.AttributeNotExists(expression.Name("is_deleted"))),
-			// expression.Or(
-			// 	expression.AttributeNotExists(expression.Name("time_finish")),
-			// 	expression.AttributeNotExists(expression.Name("time_finish"))),
-			// expression.Or(
-			// 	expression.AttributeNotExists(expression.Name("time_start")),
-			// 	expression.AttributeNotExists(expression.Name("time_start"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").Equal(expression.Value("")))).Build()
 
 			if bErr != nil {
 
@@ -105,18 +94,18 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "side":
+		case "sidewalls":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("side_cnc")),
-						expression.AttributeNotExists(expression.Name("side_pour"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("side_cnc").Equal(expression.Value("")),
+						expression.Name("side_pour").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -132,20 +121,20 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "wood":
+		case "woodshop":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("side_cnc")),
-					expression.AttributeExists(expression.Name("side_pour")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("wood_core")),
-						expression.AttributeNotExists(expression.Name("wood_cart"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("side_cnc").NotEqual(expression.Value("")),
+					expression.Name("side_pour").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("wood_core").Equal(expression.Value("")),
+						expression.Name("wood_cart").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -161,21 +150,21 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "sub":
+		case "sublimation":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("side_cnc")),
-					expression.AttributeExists(expression.Name("side_pour")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("sub_base")),
-						expression.AttributeNotExists(expression.Name("sub_top")),
-						expression.AttributeNotExists(expression.Name("sub_cart"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("side_cnc").NotEqual(expression.Value("")),
+					expression.Name("side_pour").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("sub_base").Equal(expression.Value("")),
+						expression.Name("sub_top").Equal(expression.Value("")),
+						expression.Name("sub_cart").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -191,21 +180,21 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "ed":
+		case "edges":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("sub_base")),
-					expression.AttributeExists(expression.Name("sub_top")),
-					expression.AttributeExists(expression.Name("sub_cart")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("ed_glue")),
-						expression.AttributeNotExists(expression.Name("ed_cart"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("sub_base").NotEqual(expression.Value("")),
+					expression.Name("sub_top").NotEqual(expression.Value("")),
+					expression.Name("sub_cart").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("ed_glue").Equal(expression.Value("")),
+						expression.Name("ed_cart").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -221,23 +210,26 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "dr":
+		case "cart":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("sub_base").NotEqual(expression.Value("")),
+					expression.Name("sub_top").NotEqual(expression.Value("")),
+					expression.Name("sub_cart").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("wood_cart").Equal(expression.Value("")),
+						expression.Name("sub_cart").Equal(expression.Value("")),
+						expression.Name("ed_cart").Equal(expression.Value(""))),
 					expression.Or(
-						expression.AttributeExists(expression.Name("wood_cart")),
-						expression.AttributeExists(expression.Name("sub_cart")),
-						expression.AttributeExists(expression.Name("ed_cart"))),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("wood_cart")),
-						expression.AttributeNotExists(expression.Name("sub_cart")),
-						expression.AttributeNotExists(expression.Name("ed_cart"))))).Build()
+						expression.Name("wood_cart").NotEqual(expression.Value("")),
+						expression.Name("sub_cart").NotEqual(expression.Value("")),
+						expression.Name("ed_cart").NotEqual(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -253,21 +245,21 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "lay":
+		case "layup":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("wood_cart")),
-					expression.AttributeExists(expression.Name("sub_cart")),
-					expression.AttributeExists(expression.Name("ed_cart")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("lay_press")),
-						expression.AttributeNotExists(expression.Name("lay_inspect"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("wood_cart").NotEqual(expression.Value("")),
+					expression.Name("sub_cart").NotEqual(expression.Value("")),
+					expression.Name("ed_cart").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("lay_press").Equal(expression.Value("")),
+						expression.Name("lay_inspect").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -283,20 +275,20 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
-		case "fin":
+		case "finishing":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("lay_press")),
-					expression.AttributeExists(expression.Name("lay_inspect")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("fin_tune")),
-						expression.AttributeNotExists(expression.Name("fin_inspect"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("lay_press").NotEqual(expression.Value("")),
+					expression.Name("lay_inspect").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("fin_tune").Equal(expression.Value("")),
+						expression.Name("fin_inspect").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -312,20 +304,20 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
 		case "wax":
 
 			expr, bErr := expression.NewBuilder().WithFilter(
 				expression.And(
-					expression.AttributeNotExists(expression.Name("is_deleted")),
-					expression.AttributeNotExists(expression.Name("time_finish")),
-					expression.AttributeExists(expression.Name("time_start")),
-					expression.AttributeExists(expression.Name("fin_tune")),
-					expression.AttributeExists(expression.Name("fin_inspect")),
-					expression.Or(
-						expression.AttributeNotExists(expression.Name("wax_wax")),
-						expression.AttributeNotExists(expression.Name("wax_inspect"))))).Build()
+					expression.Name("deleted").Equal(expression.Value("")),
+					expression.Name("finished").Equal(expression.Value("")),
+					expression.Name("started").NotEqual(expression.Value("")),
+					expression.Name("fin_tune").NotEqual(expression.Value("")),
+					expression.Name("fin_inspect").NotEqual(expression.Value("")),
+					expression.Or( // finished holds a date
+						expression.Name("wax_wax").Equal(expression.Value("")),
+						expression.Name("wax_inspect").Equal(expression.Value(""))))).Build()
 
 			if bErr != nil {
 
@@ -341,7 +333,7 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}, nil
 			}
 
-			return getTrackerRoom(expr)
+			return getTrackerRoom(expr, d.Room)
 
 		default:
 
@@ -400,24 +392,33 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 				}
 			}
 
+			// pass reponse 'r' into all updates so it possibly retains the new note.
 			switch d.Room {
 			case "hold":
 
-				// TODO - per serial in TrackerJson
-				// build query using time_start, deleted, and who_deleted (employee)
+				// TODO - [rush] could have set/unset/or be blank
+				//      - set, make it "rush" for sorting purposes
+				//      - unset, make it blank
+				//      - blank, do not update
+				// TODO - [artist] could have <artist name>/unset/or be blank
+				//      - <artist name> (not "unset" and not ""), set input to artist field
+				//      - unset, make it blank
+				//      - blank, do not update
+				// TODO - [started] could have set/blank
+				//      - set, make it CCYY-MM-DDTHH:MM:SSZ (EMPLOYEE)
+				//      - blank, do not update
+				// TODO - [deleted] could have set/blank
+				//      - set, make it CCYY-MM-DDTHH:MM:SSZ (EMPLOYEE)
+				//      - blank, do not update
 
-				// **** if time_start or deleted is present only update if the value in the table
-				// is not present.  if time_start or deleted/who_deleted is blank, update dynamodb
-				// item to be removed
-
-				return updateRoom()
-			case "side":
-			case "wood":
-			case "sub":
-			case "ed":
-			case "dr":
-			case "lay":
-			case "fin":
+				return updateRoom(r)
+			case "sidewalls":
+			case "woodshop":
+			case "sublimation":
+			case "edges":
+			case "cart":
+			case "layup":
+			case "finishing":
 			case "wax":
 			default:
 
@@ -450,41 +451,47 @@ func Handler(ctx context.Context, request events.APIGatewayProxyRequest) (events
 
 func updateNotes(inEmployee string, inSerial string, inNotes []string) (string, error) {
 
-	// there should never be more than one note, but it's array based to jive with the
-	// rest of the "update" process to handle many
 	firstNote := ""
 
 	t := time.Now()
 	hh, min, _ := t.Clock()
 	yy, mon, dd := t.Date()
 
+	// there should never be more than one note, but it's array based to jive with the
+	// rest of the "update" process to handle many
 	for _, n := range inNotes {
 
-		if firstNote == "" {
-			firstNote = n
-		}
+		// we have notes, check if it's not blank
+		if n != "" {
 
-		note := fmt.Sprintf("%02d/%02d/%d %02d:%02d (%s): %s", int(mon), dd, yy, hh, min, inEmployee, n)
-		newNotes := []types.AttributeValue{&types.AttributeValueMemberS{Value: note}}
+			note := fmt.Sprintf("%02d/%02d/%d %02d:%02d (%s): %s", int(mon), dd, yy, hh, min, inEmployee, n)
+			newNotes := []types.AttributeValue{&types.AttributeValueMemberS{Value: note}}
 
-		// Execute the UpdateItem operation
-		_, err := db.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
-			TableName: aws.String(TABLE_TRACKER),
-			Key: map[string]types.AttributeValue{
-				"Serial": &types.AttributeValueMemberS{Value: inSerial},
-			},
-			UpdateExpression: aws.String("SET #listField = list_append(#listField, :newNote)"),
-			ExpressionAttributeNames: map[string]string{
-				"#listField": "notes",
-			},
-			ExpressionAttributeValues: map[string]types.AttributeValue{
-				":newNote": &types.AttributeValueMemberL{Value: newNotes},
-			},
-			// ReturnValues: "ALL_NEW", // Return the updated item
-		})
+			// save the "first" one... there should only be one.
+			if firstNote == "" {
+				firstNote = note
+			}
 
-		if err != nil {
-			return "", err
+			// Execute
+			_, err := db.UpdateItem(context.TODO(), &dynamodb.UpdateItemInput{
+				TableName: aws.String(TABLE_TRACKER),
+				Key: map[string]types.AttributeValue{
+					"serial": &types.AttributeValueMemberS{Value: inSerial},
+				},
+				UpdateExpression: aws.String("SET #listField = list_append(if_not_exists(#listField, :emptyArr), :newNote)"),
+				ExpressionAttributeNames: map[string]string{
+					"#listField": "notes",
+				},
+				ExpressionAttributeValues: map[string]types.AttributeValue{
+					":emptyArr": &types.AttributeValueMemberL{Value: []types.AttributeValue{}},
+					":newNote":  &types.AttributeValueMemberL{Value: newNotes},
+				},
+			})
+
+			if err != nil {
+				fmt.Printf("blew up<%v>\n", err)
+				return "", err
+			}
 		}
 	}
 
@@ -503,28 +510,28 @@ func getEmployeeFromPin(inPin string) (string, error) {
 	}
 
 	out, err := db.Scan(context.TODO(), &dynamodb.ScanInput{
-		TableName:                 aws.String(TABLE_TRACKER),
+		TableName:                 aws.String(TABLE_EMPLOYEE),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
 		FilterExpression:          expr.Filter(),
 	})
 
-	var em EmployeeDynamo
+	var em []EmployeeDynamo
 
 	if len(out.Items) == 1 {
+
 		err = attributevalue.UnmarshalListOfMaps(out.Items, &em)
+
 		if err != nil {
 			return employee, err
 		}
-		employee = em.Name
+
+		employee = em[0].Name
 	}
 	return employee, err
 }
 
-func updateRoom() (events.APIGatewayProxyResponse, error) {
-
-	var r Resp
-	r.Error = "good"
+func updateRoom(r Resp) (events.APIGatewayProxyResponse, error) {
 
 	resp, _ := json.MarshalIndent(r, "", "  ")
 
@@ -535,20 +542,22 @@ func updateRoom() (events.APIGatewayProxyResponse, error) {
 	}, nil
 }
 
-func getTrackerRoom(inExpr expression.Expression) (events.APIGatewayProxyResponse, error) {
+func getTrackerRoom(inExpr expression.Expression, inRoom string) (events.APIGatewayProxyResponse, error) {
 
 	var r Resp
 	r.Error = "good"
 
 	out, err := db.Scan(context.TODO(), &dynamodb.ScanInput{
-		TableName:                aws.String(TABLE_TRACKER),
-		ExpressionAttributeNames: inExpr.Names(),
-		FilterExpression:         inExpr.Filter(),
+		TableName:                 aws.String(TABLE_TRACKER),
+		ExpressionAttributeNames:  inExpr.Names(),
+		ExpressionAttributeValues: inExpr.Values(),
+		FilterExpression:          inExpr.Filter(),
 	})
 
 	if err != nil {
 
 		r.Error = fmt.Sprintf("Bad Scan (%s): %v", TABLE_TRACKER, err)
+		fmt.Println(r.Error)
 
 		resp, _ := json.MarshalIndent(r, "", "  ")
 
@@ -566,6 +575,7 @@ func getTrackerRoom(inExpr expression.Expression) (events.APIGatewayProxyRespons
 	if err != nil {
 
 		r.Error = fmt.Sprintf("Bad Unmarshal: %v", err)
+		fmt.Println(r.Error)
 
 		resp, _ := json.MarshalIndent(r, "", "  ")
 
@@ -580,12 +590,40 @@ func getTrackerRoom(inExpr expression.Expression) (events.APIGatewayProxyRespons
 		r.TrackerJson = append(r.TrackerJson, TrackerJson(t))
 	}
 
+	if inRoom == "hold" {
+		r.TrackerJson = sortRushCreated(r.TrackerJson)
+	} else {
+		r.TrackerJson = sortRushStarted(r.TrackerJson)
+	}
+
 	resp, _ := json.MarshalIndent(r, "", "  ")
 	return events.APIGatewayProxyResponse{
 		StatusCode: 200,
 		Headers:    HEADERS,
 		Body:       string(resp),
 	}, nil
+}
+
+func sortRushCreated(tj []TrackerJson) []TrackerJson {
+
+	sort.Slice(tj, func(i, j int) bool {
+		if tj[i].Rush != tj[j].Rush {
+			return tj[i].Rush > tj[j].Rush
+		}
+		return tj[i].Created < tj[j].Created
+	})
+	return tj
+}
+
+func sortRushStarted(tj []TrackerJson) []TrackerJson {
+
+	sort.Slice(tj, func(i, j int) bool {
+		if tj[i].Rush != tj[j].Rush {
+			return tj[i].Rush > tj[j].Rush
+		}
+		return tj[i].Started < tj[j].Started
+	})
+	return tj
 }
 
 func main() {
